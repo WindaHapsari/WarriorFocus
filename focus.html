@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WARRIOR FOCUS | ELITE BALANCED</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --gold: #facc15; --blue: #38bdf8; --bg: #020617;
+            --panel: #1e293b; --accent: #f43f5e; --border: #475569;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            background: radial-gradient(circle, #1e1b4b 0%, #020617 100%);
+            font-family: 'Outfit', sans-serif; color: white; margin: 0;
+            display: flex; justify-content: center; min-height: 100vh; 
+            padding: 20px;
+        }
+
+        .game-container { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 20px; }
+
+        .panel { 
+            background: var(--panel); border: 2px solid var(--border); padding: 25px; border-radius: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5); position: relative;
+        }
+
+        .title { font-family: 'Press Start 2P', cursive; font-size: 0.75rem; color: var(--gold); text-align: center; margin-bottom: 20px; }
+
+        .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .attr-box { background: rgba(0,0,0,0.4); padding: 15px 10px; border-radius: 18px; border: 1px solid var(--border); text-align: center; }
+        .label-sm { font-family: 'Press Start 2P', cursive; font-size: 0.45rem; color: var(--gold); margin-bottom: 8px; display: block; opacity: 0.7; }
+        .attr-val { font-size: 1rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Boss Area */
+        .boss-area { text-align: center; margin-bottom: 20px; }
+        #bossIcon { font-size: 4.5rem; display: block; margin-bottom: 15px; transition: 0.2s; }
+        .hp-bar { width: 100%; height: 18px; background: #310a0a; border-radius: 10px; border: 1px solid #000; overflow: hidden; }
+        .hp-fill { height: 100%; width: 100%; background: var(--accent); transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        .timer-val { font-size: 4rem; font-weight: 900; color: var(--blue); text-align: center; margin: 15px 0; }
+
+        /* Inputs & Buttons */
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        input { background: #0f172a; border: 2px solid var(--border); color: white; padding: 14px; border-radius: 12px; outline: none; font-size: 1rem; }
+        
+        .btn { padding: 14px; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.2s; font-size: 0.85rem; }
+        .btn-main { background: #6366f1; color: white; flex: 2; border-bottom: 4px solid #4338ca; }
+        .btn-gold { background: var(--gold); color: #000; border-bottom: 4px solid #ca8a04; }
+        .btn-sub { background: #334155; color: white; border-bottom: 4px solid #1e293b; padding: 14px 18px; }
+
+        /* Task List - FIXED HEIGHT (Max 4 Items) */
+        .task-list { 
+            margin-top: 10px; 
+            max-height: 290px; /* Menampung sekitar 4 item */
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .task-list::-webkit-scrollbar { width: 4px; }
+        .task-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+        .task-item { background: rgba(255,255,255,0.04); padding: 15px; border-radius: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .task-item span { flex: 1; font-size: 1rem; }
+
+        /* Modals */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(8px); }
+        .modal-inner { background: var(--panel); padding: 35px; border-radius: 30px; width: 100%; max-width: 380px; border: 2px solid var(--border); text-align: center; }
+
+        /* Loot Modal - Card Styling */
+        .loot-wrapper { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; }
+        .card-container { display: flex; gap: 15px; justify-content: center; width: 100%; margin: 30px 0; }
+        .card { width: 90px; height: 130px; cursor: pointer; position: relative; perspective: 1000px; transition: 0.3s; }
+        .card-inner { position: absolute; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s; }
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px; border: 3px solid var(--gold); display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; }
+        .card-front { background: #0f172a; font-size: 2.5rem; }
+        .card-back { background: var(--gold); color: black; transform: rotateY(180deg); padding: 10px; text-align: center; font-size: 0.75rem; }
+        
+        /* Card Winner State - Centered and Separated from Button */
+        .card.zoom { 
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(2.2); 
+            z-index: 2000; 
+        }
+        #collectBtn { 
+            position: absolute;
+            bottom: 20px;
+            width: 220px;
+            z-index: 2001;
+        }
+
+        .laser { position: fixed; height: 4px; background: white; box-shadow: 0 0 15px var(--blue); z-index: 5000; pointer-events: none; }
+        .hit { animation: shake 0.4s ease; }
+        @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(-8px, 4px); } 75% { transform: translate(8px, -4px); } }
+        
+        .nav-footer { display: flex; justify-content: space-between; padding: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="title">⚔️ WARRIOR FOCUS ⚔️</div>
+
+    <div class="panel attr-grid">
+        <div class="attr-box"><span class="label-sm">GRATITUDE</span><div id="dispG" class="attr-val">-</div></div>
+        <div class="attr-box"><span class="label-sm">TARGET</span><div id="dispI" class="attr-val">-</div></div>
+    </div>
+
+    <div class="panel">
+        <div class="boss-area">
+            <span id="bossIcon">👾</span>
+            <div class="hp-bar"><div id="hpFill" class="hp-fill"></div></div>
+        </div>
+
+        <div class="timer-val" id="timerDisp">00:00:00</div>
+        
+        <div class="input-row">
+            <input type="number" id="hIn" placeholder="H" style="width:70px">
+            <input type="number" id="mIn" placeholder="M" style="width:70px">
+            <button class="btn btn-main" onclick="toggleTimer()" id="startBtn">EXECUTE</button>
+            <button class="btn btn-sub" onclick="resetTimer()">↺</button>
+        </div>
+
+        <div class="input-row">
+            <input type="text" id="taskIn" placeholder="New quest name..." style="flex:1">
+            <button class="btn btn-gold" onclick="addTask()">+</button>
+        </div>
+
+        <div id="taskList" class="task-list"></div>
+
+        <button id="lootBtn" class="btn btn-gold" style="width:100%; margin-top:20px; display:none; padding:18px" onclick="openLoot()">CLAIM REWARD 🎰</button>
+    </div>
+
+    <div class="nav-footer">
+        <button onclick="openSettings()" style="background:none; border:none; color:var(--blue); cursor:pointer; font-weight:bold; font-size:0.8rem">SETTINGS</button>
+        <button onclick="confirmReset()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:bold; font-size:0.8rem">NEW DAY</button>
+    </div>
+</div>
+
+<div class="modal" id="ritualModal" style="display:flex">
+    <div class="modal-inner">
+        <div class="title">MORNING RITUAL</div>
+        <label class="label-sm">I AM GRATEFUL FOR</label>
+        <input type="text" id="ritG" class="ritual-input" placeholder="..." style="width:100%; margin-bottom:20px; text-align:center; padding:12px; background:#0f172a; border:2px solid var(--border); color:white; border-radius:12px">
+        <label class="label-sm">TARGET TODAY</label>
+        <input type="text" id="ritI" class="ritual-input" placeholder="..." style="width:100%; margin-bottom:20px; text-align:center; padding:12px; background:#0f172a; border:2px solid var(--border); color:white; border-radius:12px">
+        <button class="btn btn-main" style="width:100%" onclick="saveRitual()">START MISSION</button>
+    </div>
+</div>
+
+<div class="modal" id="resetModal">
+    <div class="modal-inner">
+        <div class="title" style="color:var(--accent)">RESET JOURNEY?</div>
+        <p style="margin-bottom:25px; opacity:0.8">Semua progress tugas hari ini akan dihapus.</p>
+        <div style="display:flex; gap:15px">
+            <button class="btn btn-main" style="flex:1" onclick="executeReset()">YA</button>
+            <button class="btn btn-sub" style="flex:1" onclick="closeModal('resetModal')">TIDAK</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="settingsModal">
+    <div class="modal-inner">
+        <div class="title">EDIT REWARDS</div>
+        <div id="rewardSettings"></div>
+        <button id="addRewardBtn" class="btn btn-gold" style="width:100%; margin:15px 0" onclick="addRewardRow('🎁', '')">+ ADD REWARD</button>
+        <button class="btn btn-main" style="width:100%" onclick="saveSettings()">SAVE CHANGES</button>
+    </div>
+</div>
+
+<div class="modal" id="lootModal">
+    <div class="loot-wrapper">
+        <div class="title">PICK A CARD</div>
+        <div class="card-container" id="cardDeck"></div>
+        <button id="collectBtn" class="btn btn-main" style="display:none" onclick="closeLoot()">COLLECT REWARD</button>
+    </div>
+</div>
+
+<div id="punishModal" class="modal">
+    <div class="modal-inner" style="border-color: var(--accent)">
+        <div id="pCount" style="font-size:4rem; font-weight:900; color:var(--accent)">0/5</div>
+        <div class="title" style="color:var(--accent)">FOCUS LOST</div>
+        <p id="pQuote" style="margin-bottom:25px; line-height:1.6">Saya akan lebih fokus dan tidak menyia-nyiakan waktu saya lagi demi impian saya.</p>
+        <input type="text" id="pIn" placeholder="Type here..." style="width:100%; text-align:center; padding:12px; background:#0f172a; border:2px solid var(--border); color:white; border-radius:12px" autocomplete="off" onpaste="return false">
+    </div>
+</div>
+
+<div class="modal" id="emojiModal">
+    <div class="modal-inner" style="max-width:320px">
+        <div id="emojiGrid" style="display:grid; grid-template-columns: repeat(5,1fr); gap:12px"></div>
+    </div>
+</div>
+
+<script>
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let rewards = JSON.parse(localStorage.getItem('rewardData')) || [{i:"☕", t:"Coffee"}, {i:"🎮", t:"Gaming"}, {i:"🍫", t:"Snack"}];
+    let timeLeft = 0, timerId = null, punishScore = 0, targetEmojiBtn = null;
+    const emojis = ["☕","🎮","🍫","🍕","😴","📱","🍦","📚","🎧","🎬","🥤","🧘","💪","🔥"];
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function confirmReset() { document.getElementById('resetModal').style.display = 'flex'; }
+    function executeReset() { localStorage.removeItem('tasks'); location.reload(); }
+
+    function saveRitual() {
+        const g = document.getElementById('ritG').value, i = document.getElementById('ritI').value;
+        if(!g || !i) return;
+        document.getElementById('dispG').innerText = g;
+        document.getElementById('dispI').innerText = i;
+        closeModal('ritualModal');
+    }
+
+    function toggleTimer() {
+        if(timerId) { clearInterval(timerId); timerId = null; document.getElementById('startBtn').innerText = "RESUME"; return; }
+        const h = parseInt(document.getElementById('hIn').value)||0, m = parseInt(document.getElementById('mIn').value)||0;
+        if(h>0 || m>0) { timeLeft = (h*3600)+(m*60); document.getElementById('hIn').value=''; document.getElementById('mIn').value=''; }
+        if(timeLeft <= 0) return;
+        timerId = setInterval(() => {
+            timeLeft--; updateTimerDisp();
+            if(timeLeft <= 0) { 
+                clearInterval(timerId); timerId = null; 
+                if(tasks.some(t => !t.done)) document.getElementById('punishModal').style.display = 'flex';
+            }
+        }, 1000);
+        document.getElementById('startBtn').innerText = "PAUSE";
+    }
+
+    function updateTimerDisp() {
+        const h = Math.floor(timeLeft/3600).toString().padStart(2,'0'), m = Math.floor((timeLeft%3600)/60).toString().padStart(2,'0'), s = (timeLeft%60).toString().padStart(2,'0');
+        document.getElementById('timerDisp').innerText = `${h}:${m}:${s}`;
+    }
+
+    function resetTimer() { clearInterval(timerId); timerId = null; timeLeft = 0; updateTimerDisp(); document.getElementById('startBtn').innerText = "EXECUTE"; }
+
+    function addTask() {
+        const val = document.getElementById('taskIn').value; if(!val) return;
+        tasks.push({id: Date.now(), txt: val, done: false});
+        document.getElementById('taskIn').value = ''; render();
+    }
+
+    function toggleTask(id, e) {
+        let t = tasks.find(x => x.id === id);
+        if(!t.done) { 
+            t.done = true; 
+            const sRect = e.target.getBoundingClientRect(), bRect = document.getElementById('bossIcon').getBoundingClientRect();
+            const laser = document.createElement('div'); laser.className = 'laser';
+            const startX = sRect.left + sRect.width/2, startY = sRect.top + sRect.height/2;
+            const dist = Math.hypot(bRect.left + bRect.width/2 - startX, bRect.top + bRect.height/2 - startY);
+            const ang = Math.atan2(bRect.top + bRect.height/2 - startY, bRect.left + bRect.width/2 - startX);
+            laser.style.cssText = `left:${startX}px; top:${startY}px; width:0; transform:rotate(${ang}rad); transform-origin:left center;`;
+            document.body.appendChild(laser);
+            setTimeout(() => { laser.style.transition = 'width 0.25s ease-out'; laser.style.width = dist + 'px';
+                setTimeout(() => { laser.remove(); document.getElementById('bossIcon').classList.add('hit'); setTimeout(()=>document.getElementById('bossIcon').classList.remove('hit'), 400); updateBoss(); }, 250);
+            }, 50);
+        } else t.done = false;
+        render();
+    }
+
+    function render() {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        const list = document.getElementById('taskList'); list.innerHTML = '';
+        tasks.forEach(t => {
+            list.innerHTML += `<div class="task-item">
+                <input type="checkbox" style="width:22px; height:22px" ${t.done?'checked':''} onchange="toggleTask(${t.id}, event)">
+                <span style="${t.done?'text-decoration:line-through; opacity:0.4':''}">${t.txt}</span>
+                <button onclick="tasks=tasks.filter(x=>x.id!==${t.id});render();" style="background:none; border:none; color:var(--accent); font-size:1.4rem; cursor:pointer">×</button>
+            </div>`;
+        });
+        updateBoss();
+    }
+
+    function updateBoss() {
+        const total = tasks.length, done = tasks.filter(x=>x.done).length;
+        const hp = total === 0 ? 100 : 100 - (done/total*100);
+        document.getElementById('hpFill').style.width = hp + '%';
+        document.getElementById('bossIcon').innerText = hp <= 0 ? '💀' : '👾';
+        document.getElementById('lootBtn').style.display = (hp <= 0 && total > 0) ? 'block' : 'none';
+    }
+
+    function openSettings() {
+        const area = document.getElementById('rewardSettings'); area.innerHTML = '';
+        rewards.forEach(r => addRewardRow(r.i, r.t));
+        document.getElementById('settingsModal').style.display = 'flex';
+        checkLimit();
+    }
+
+    function addRewardRow(emoji, txt) {
+        const div = document.createElement('div'); div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px';
+        div.className = 'setting-row-item';
+        div.innerHTML = `<button class="btn btn-sub" style="width:50px" onclick="openEmoji(this)">${emoji}</button>
+                         <input type="text" value="${txt}" style="flex:1; padding:10px; background:#0f172a; border:1px solid var(--border); color:white; border-radius:10px">
+                         <button onclick="this.parentElement.remove(); checkLimit();" style="color:var(--accent); background:none; border:none; font-size:1.5rem">×</button>`;
+        document.getElementById('rewardSettings').appendChild(div);
+        checkLimit();
+    }
+
+    function openEmoji(btn) {
+        targetEmojiBtn = btn;
+        const grid = document.getElementById('emojiGrid'); grid.innerHTML = '';
+        emojis.forEach(e => {
+            const s = document.createElement('span'); s.innerText = e; s.style.cssText = "font-size:1.5rem; cursor:pointer; padding:5px; text-align:center";
+            s.onclick = () => { targetEmojiBtn.innerText = e; closeModal('emojiModal'); };
+            grid.appendChild(s);
+        });
+        document.getElementById('emojiModal').style.display = 'flex';
+    }
+
+    function checkLimit() { document.getElementById('addRewardBtn').style.display = document.querySelectorAll('.setting-row-item').length >= 3 ? 'none' : 'block'; }
+    
+    function saveSettings() {
+        rewards = Array.from(document.querySelectorAll('.setting-row-item')).map(r => ({ i: r.querySelector('button').innerText, t: r.querySelector('input').value }));
+        localStorage.setItem('rewardData', JSON.stringify(rewards));
+        closeModal('settingsModal');
+    }
+
+    function openLoot() {
+        const deck = document.getElementById('cardDeck'); deck.innerHTML = '';
+        document.getElementById('collectBtn').style.display = 'none';
+        
+        let shuffled = [...rewards].sort(() => Math.random() - 0.5);
+
+        shuffled.forEach(r => {
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<div class="card-inner"><div class="card-face card-front">🔮</div><div class="card-face card-back"><div>${r.i}</div><div style="font-size:0.6rem; margin-top:10px">${r.t}</div></div></div>`;
+            card.onclick = () => {
+                if(card.classList.contains('flipped')) return;
+                document.querySelectorAll('.card').forEach(c => { if(c!==card) c.style.opacity = '0'; });
+                card.classList.add('flipped', 'zoom');
+                setTimeout(() => { document.getElementById('collectBtn').style.display = 'block'; }, 600);
+                confetti({ particleCount: 200, spread: 80, origin: { y: 0.5 } });
+            };
+            deck.appendChild(card);
+        });
+        document.getElementById('lootModal').style.display = 'flex';
+    }
+
+    function closeLoot() { closeModal('lootModal'); tasks = []; render(); }
+
+    document.getElementById('pIn').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') {
+            if(e.target.value.trim() === document.getElementById('pQuote').innerText.trim()) {
+                punishScore++; document.getElementById('pCount').innerText = punishScore + "/5";
+                e.target.value = '';
+                if(punishScore >= 5) { closeModal('punishModal'); punishScore = 0; resetTimer(); }
+            } else { e.target.style.borderColor = 'red'; setTimeout(()=>e.target.style.borderColor='', 500); }
+        }
+    });
+
+    render();
+</script>
+</body>
+</html>
